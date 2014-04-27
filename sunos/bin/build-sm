@@ -100,5 +100,5 @@ build_sm()
 	env DESTDIR="${MOZILLA_WS}${staging}" $makeenv $MAKE install 
 }
 
-#build_sm
+build_sm
 packageit
