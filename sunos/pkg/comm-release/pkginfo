@@ -1,0 +1,7 @@
+PKG="OPNDseamonkey"
+NAME="Mozilla Seamonkey"
+VERSION="2.25"
+ARCH="i386"
+CATEGORY="application"
+VENDOR="IRIXUser"
+BASEDIR="/"

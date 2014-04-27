@@ -1,0 +1,104 @@
+#!/bin/ksh93
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+
+#
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2014 David Mackay.  All rights reserved.
+# Use is subject to license terms.
+#
+
+set -e
+
+COMPONENT="comm-release"
+
+usage() 
+{
+	echo "usage: build-${COMPONENT} [-s] [debug|nondebug]" >&2
+	exit 1
+}
+
+[ "$1" = "-h" ] && usage
+[ "$1" = "-?" ] && usage
+
+if echo $0 | grep ^/ 2>&1 > /dev/null ; then
+	dir=$(dirname $0)
+else
+	dir=$PWD/$(dirname $0)
+fi
+. $dir/../inc/mozilla.ksh
+
+do_getopts $*
+shift `expr $optind - 1`
+
+check_gate ${COMPONENT}
+
+export gatepath="${MOZILLA_WS}${COMPONENT}"
+
+cflags_debug=" -g -O0 "
+#ldflags_common=" -R/opt//lib "
+
+confflags_common="--enable-application=suite --with-system-libevent 		
+    --disable-pedantic --enable-crypto --with-pthreads --disable-javaxpcom 
+    --enable-default-toolkit=cairo-gtk2 
+    --enable-system-ffi --with-system-zlib 			
+    --with-system-bz2 --disable-crashreporter 	
+    --disable-libnotify --disable-notifications --disable-updater 	
+    --disable-necko-wifi --enable-chrome-format=flat --disable-libjpeg-turbo 
+    --disable-elf-hack --disable-elf-dynstr-gc --disable-gconf --enable-gio 
+    --enable-extensions=gio --disable-mochitest --enable-canvas 	
+    --disable-installer --enable-url-classifier --enable-shared-js 	
+    --with-system-ply --disable-icf --disable-necko-wifi --enable-calendar 
+    --enable-extensions=default,irc --disable-webrtc --disable-tests 	
+    --prefix=/opt/mozilla"
+
+confflags_debug="--enable-debug --enable-debug-symbols 	
+    --disable-install-strip"
+
+confflags_nondebug="--disable-debug --disable-debug-symbols 	
+    --enable-install-strip"
+
+msg "building ${COMPONENT}"
+
+init_build $1
+
+makeenv="MOZ_OBJDIR=${MOZILLA_WS}${objdir} MOZ_MAKE_FLAGS=\"-j72\""
+makeflags="-j72"
+
+[ -n "$skip_prepare" ] || msg "cleaning ${objdir}"
+[ -n "$skip_prepare" ] || rm -rf $objdir
+
+build_sm()
+{
+	[ -n "$incremental" ] || configureit
+
+	msg "making ${COMPONENT}"
+	cd ${MOZILLA_WS}${objdir}
+	env $makeenv $MAKE $makeflags
+
+	mkdir -p $staging
+
+	msg "installing ${COMPONENT}"
+	env DESTDIR="${MOZILLA_WS}${staging}" $makeenv $MAKE install 
+}
+
+#build_sm
+packageit
